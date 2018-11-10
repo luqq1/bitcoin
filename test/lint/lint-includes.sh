@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright (c) 2018 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
@@ -6,9 +6,13 @@
 #
 # Check for duplicate includes.
 # Guard against accidental introduction of new Boost dependencies.
+# Check includes: Check for duplicate includes. Enforce bracket syntax includes.
+
+export LC_ALL=C
+IGNORE_REGEXP="/(leveldb|secp256k1|univalue)/"
 
 filter_suffix() {
-    git ls-files | grep -E "^src/.*\.${1}"'$' | grep -Ev "/(leveldb|secp256k1|univalue)/"
+    git ls-files | grep -E "^src/.*\.${1}"'$' | grep -Ev "${IGNORE_REGEXP}"
 }
 
 EXIT_CODE=0
@@ -43,20 +47,14 @@ fi
 
 EXPECTED_BOOST_INCLUDES=(
     boost/algorithm/string.hpp
-    boost/algorithm/string/case_conv.hpp
     boost/algorithm/string/classification.hpp
-    boost/algorithm/string/join.hpp
-    boost/algorithm/string/predicate.hpp
     boost/algorithm/string/replace.hpp
     boost/algorithm/string/split.hpp
-    boost/assign/std/vector.hpp
     boost/bind.hpp
     boost/chrono/chrono.hpp
     boost/date_time/posix_time/posix_time.hpp
     boost/filesystem.hpp
-    boost/filesystem/detail/utf8_codecvt_facet.hpp
     boost/filesystem/fstream.hpp
-    boost/interprocess/sync/file_lock.hpp
     boost/multi_index/hashed_index.hpp
     boost/multi_index/ordered_index.hpp
     boost/multi_index/sequenced_index.hpp
@@ -64,8 +62,6 @@ EXPECTED_BOOST_INCLUDES=(
     boost/optional.hpp
     boost/preprocessor/cat.hpp
     boost/preprocessor/stringize.hpp
-    boost/program_options/detail/config_file.hpp
-    boost/scoped_array.hpp
     boost/signals2/connection.hpp
     boost/signals2/last_value.hpp
     boost/signals2/signal.hpp
@@ -104,5 +100,13 @@ for EXPECTED_BOOST_INCLUDE in "${EXPECTED_BOOST_INCLUDES[@]}"; do
         EXIT_CODE=1
     fi
 done
+
+QUOTE_SYNTAX_INCLUDES=$(git grep '^#include "' -- "*.cpp" "*.h" | grep -Ev "${IGNORE_REGEXP}")
+if [[ ${QUOTE_SYNTAX_INCLUDES} != "" ]]; then
+    echo "Please use bracket syntax includes (\"#include <foo.h>\") instead of quote syntax includes:"
+    echo "${QUOTE_SYNTAX_INCLUDES}"
+    echo
+    EXIT_CODE=1
+fi
 
 exit ${EXIT_CODE}
